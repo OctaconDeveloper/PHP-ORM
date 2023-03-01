@@ -1,0 +1,22 @@
+{
+    "name": "octacondeveloper/php-orm",
+    "description": "A native orm for core php",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "octacondeveloper",
+            "email": "kaakadev@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload":{
+        "psr-4":{
+            "PhpOrm\\":"src"
+        },
+        "files" : ["src/Utils/Helper.php"]
+    },
+    "require-dev": {
+        "vlucas/phpdotenv": "5.5.x-dev"
+    }
+}
