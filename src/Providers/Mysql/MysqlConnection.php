@@ -29,13 +29,13 @@ class MysqlConnection implements ConnectionInterface
     public function connection()
     {
 
-        $connectionString = "mysql:host={$this->databaseHost};dbname=alex;port={$this->databasePort}";
+        $connectionString = "mysql:host={$this->databaseHost};dbname={$this->databaseName};port={$this->databasePort}";
         try {
             $connection = new PDO($connectionString, $this->databaseUser, $this->databasePassword);
             $connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             return $connection;
         } catch (PDOException $error) {
-            die(handleMysqlError($error->getMessage()));
+            die(handleSQLError($error->getMessage()));
         }
     }
 }

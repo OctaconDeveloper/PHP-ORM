@@ -8,15 +8,14 @@ use PhpOrm\Interfaces\QueryInterface;
 class MysqlProvider implements QueryInterface
 {
 
-    protected $connection;
-    protected $query;
-    protected $conditions;
-    protected $table = "cryptos";
+    private $connection;
+    private $query;
+    private $conditions;
+    private $table;
 
     public function __construct()
     {
         $this->connection = (new MysqlConnection())->connection();
-        $this->query = "SELECT * FROM `" . $this->table . "`";
     }
 
     /**
@@ -28,6 +27,7 @@ class MysqlProvider implements QueryInterface
     public function setTable(string $table)
     {
         $this->table = $table;
+        $this->query = "SELECT * FROM `" . $this->table . "`";
         return $this;
     }
 
@@ -47,7 +47,7 @@ class MysqlProvider implements QueryInterface
             $sqlString =  "INSERT INTO `{$this->table}` ({$columns}) VALUES ({$attributes})";
             return $this->connection->prepare($sqlString)->execute($data);
         } catch (PDOException $error) {
-            die(handleMysqlError($error->getMessage()));
+            die(handleSQLError($error->getMessage()));
         }
     }
 
@@ -74,7 +74,7 @@ class MysqlProvider implements QueryInterface
             return true;
         } catch (PDOException $error) {
             $this->connection->rollBack();
-            die(handleMysqlError($error->getMessage()));
+            die(handleSQLError($error->getMessage()));
         }
     }
 
@@ -102,7 +102,7 @@ class MysqlProvider implements QueryInterface
     public function first()
     {
         if (strpos($this->conditions, "LIMIT") !== false) {
-            die(handleMysqlError("first() can not be used with take() \n\n"));
+            die(handleSQLError("first() can not be used with take() \n\n"));
         }
 
         $sqlString =  $this->query . $this->conditions . " LIMIT 1";
@@ -116,10 +116,14 @@ class MysqlProvider implements QueryInterface
      * @param string $column
      * @return integer|string
      */
-    public function last(string $column = 'id')
+    public function last(string $column = null)
     {
+        if(!$column)
+        {
+            $column =  $this->getFirstColumn();
+        }
         if (strpos($this->conditions, "LIMIT") !== false) {
-            die(handleMysqlError("last() can not be used with take() \n\n"));
+            die(handleSQLError("last() can not be used with take() \n\n"));
         }
         //check if condition has ORDER BY;
         if (strpos($this->conditions, "ORDER BY") !== false) {
@@ -128,6 +132,18 @@ class MysqlProvider implements QueryInterface
             $sqlString =  $this->query  . $this->conditions . " ORDER BY `{$column}` DESC LIMIT 1";
         }
         return $this->connection->query($sqlString)->fetch();
+    }
+
+    /**
+     * Get the first column of a table
+     *
+     * @return string|null
+     */
+    protected function getFirstColumn() : ?string
+    {
+        $sqlString = "SELECT * FROM {$this->table};";
+        $result = $this->connection->query($sqlString)->fetch();
+        return array_key_first($result);
     }
 
     /**
@@ -219,11 +235,26 @@ class MysqlProvider implements QueryInterface
      * Get total count of query
      *
      * @param string $column
+     * @param string $value = null
+     * @param string $operand = null
      * @return integer|string
      */
-    public function count(string $column = "*")
+    public function count(string $column = "*", string $value = null, string $operand = null)
     {
-        $sqlString = "SELECT count({$column}) FROM `" . $this->table . "`" . $this->conditions;
+        if (isset($operand) && in_array($operand, $this->getOperators())) {
+            $operator = $operand;
+        } else {
+            $operator = "=";
+        }
+
+        if($column != "*" && isset($value))
+        {
+            $sqlString = "SELECT count(*) FROM `" . $this->table . "`" . $this->conditions; 
+        }else{
+            $this->setCondition("`{$column}` {$operator} '{$value}'");
+            $sqlString = "SELECT count({$column}) FROM `" . $this->table . "`" . $this->conditions;
+        }
+
         return $this->connection->query($sqlString)->fetchColumn();
     }
 
@@ -233,8 +264,12 @@ class MysqlProvider implements QueryInterface
      * @param string $column
      * @return integer|string
      */
-    public function max(string $column)
+    public function max(string $column = null)
     {
+        if(!$column)
+        {
+            $column =  $this->getFirstColumn();
+        }
         $sqlString = "SELECT MAX({$column}) FROM `" . $this->table . "`" . $this->conditions;
         return $this->connection->query($sqlString)->fetchColumn();
     }
@@ -245,8 +280,12 @@ class MysqlProvider implements QueryInterface
      * @param string $column
      * @return integer|string
      */
-    public function min(string $column)
+    public function min(string $column = null)
     {
+        if(!$column)
+        {
+            $column =  $this->getFirstColumn();
+        }
         $sqlString = "SELECT MIN({$column}) FROM `" . $this->table . "`" . $this->conditions;
         return $this->connection->query($sqlString)->fetchColumn();
     }
@@ -265,10 +304,32 @@ class MysqlProvider implements QueryInterface
             $sqlString = "UPDATE `{$this->table}`  SET " . $updateSql . " " . $this->conditions;
             return $this->connection->prepare($sqlString)->execute($data);
         } catch (PDOException $error) {
-            die(handleMysqlError($error->getMessage()));
+            die(handleSQLError($error->getMessage()));
         }
     }
 
+    /**
+     * Delete record(s)
+     *
+     * @return boolean|null
+     */
+    public function delete(): ?bool
+    {
+        try {
+            if(!$this->conditions)
+            {
+                $sqlString = "DELETE FROM `{$this->table}`";
+            }else{
+                $sqlString = "DELETE FROM `{$this->table}`". $this->conditions;
+            }
+            return $this->connection->prepare($sqlString)->execute();
+        } catch (PDOException $error) {
+            die(handleSQLError($error->getMessage()));
+        }
+    }
+
+
+    
 
     /**
      * Handle raw sql query
@@ -289,7 +350,7 @@ class MysqlProvider implements QueryInterface
      */
     public function begingTransaction()
     {
-        return $this->connection->beginTransaction();
+        $this->connection->beginTransaction();
     }
 
     /**
@@ -321,13 +382,14 @@ class MysqlProvider implements QueryInterface
      */
     public function transaction($transaction)
     {
-        return $this->connection->beginTransaction();
+        $this->connection->beginTransaction();
         try {
             $transaction;
             $this->connection->commit();
+            return true;
         } catch (PDOException $error) {
             $this->connection->rollBack();
-            die(handleMysqlError($error->getMessage()));
+            die(handleSQLError($error->getMessage()));
         }
     }
 

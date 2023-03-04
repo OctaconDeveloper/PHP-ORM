@@ -12,7 +12,12 @@ class Query implements QueryInterface
 
     public function __construct()
     {
-        self::$provider = (new Provider())->load();
+        static::$provider = (new Provider())->load();
+    }
+ 
+    public static function init()
+    {
+        return new self();
     }
 
     /**
@@ -23,8 +28,8 @@ class Query implements QueryInterface
      */
     public static function table(string $table)
     {
-        // self::$provider->setTable($table);
-        return new self();
+        static::init();
+       return static::$provider->setTable($table);
     }
 
 
@@ -89,8 +94,9 @@ class Query implements QueryInterface
         return self::$provider->orderBy($column, $order);
     }
 
-    public function rawQuery(string $sqlQuery)
+    public static function rawQuery(string $sqlQuery)
     {
+        static::init();
         return self::$provider->rawQuery($sqlQuery);
     }
 
@@ -99,9 +105,9 @@ class Query implements QueryInterface
         return self::$provider->take($limit);
     }
 
-    public function count(string $column = "*")
+    public function count(string $column = "*", string $value = null, string $operand = null)
     {
-        return self::$provider->count($column);
+        return self::$provider->count($column,$value, $operand);
     }
 
     public function max(string $column)
@@ -119,6 +125,10 @@ class Query implements QueryInterface
         return self::$provider->update($data);
     }
 
+    public function delete()
+    {
+        return self::$provider->delete();
+    }
 
     
 

@@ -3,6 +3,7 @@
 namespace PhpOrm\Providers\PostgreSQL;
 
 use Exception;
+use PDO;
 use PhpOrm\Interfaces\ConnectionInterface;
 
 class PostgreSQLConnection implements ConnectionInterface
@@ -23,12 +24,13 @@ class PostgreSQLConnection implements ConnectionInterface
     }
     public function connection()
     {
-        $connectionString = "host={$this->databaseHost} port={$this->databasePort} dbname={$this->databaseName} user={$this->databaseUser} password={$this->databasePassword}";
+        $connectionString = "pgsql:host={$this->databaseHost}; port={$this->databasePort}; dbname={$this->databaseName}; user={$this->databaseUser}; password={$this->databasePassword}";
         try {
-            $connection = pg_connect($connectionString, $this->databaseUser, $this->databasePassword);
+            $connection = new PDO($connectionString, $this->databaseUser, $this->databasePassword);
+            $connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             return $connection;
         } catch (Exception $error) {
-            die(new Exception($error->getMessage(), 500));
+            die(handleSQLError($error->getMessage()));
         }
     }
 }

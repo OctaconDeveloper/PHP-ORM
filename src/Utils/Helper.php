@@ -34,7 +34,7 @@ function getMysqlUpdateAttribute(array $data)
 }
 
 
-function handleMysqlError($error_message)
+function handleSQLError($error_message)
 {
     $debug = debug_backtrace();
     $count = count($debug);
