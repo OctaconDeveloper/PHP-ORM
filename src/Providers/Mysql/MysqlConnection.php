@@ -3,12 +3,10 @@
 namespace PhpOrm\Providers\Mysql;
 
 use PDO;
-use Exception;
 use PDOException;
-use PhpOrm\Errors\MysqlErrorHandler;
 use PhpOrm\Interfaces\ConnectionInterface;
 
-class MysqlConnection implements ConnectionInterface
+class MysqlConnection implements ConnectionInterface 
 {
 
     protected $databaseName;

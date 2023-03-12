@@ -129,17 +129,22 @@ class Query implements QueryInterface
     {
         return self::$provider->delete();
     }
-
     
+    public function begingTransaction(){
+        self::$provider->begingTransaction();
+    }
 
+    public function commitTransaction(){
+        self::$provider->commitTransaction();
+    }
 
+    public function rollbackTransaction(){
+        self::$provider->rollbackTransaction();
+    }
 
-
-
-    public function begingTransaction(){}
-    public function commitTransaction(){}
-    public function rollbackTransaction(){}
-    public function transaction($transaction){}
+    public function transaction($transaction){
+        return self::$provider->transaction($transaction);
+    }
 
 
 }

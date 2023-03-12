@@ -3,6 +3,7 @@
 namespace PhpOrm\Utils;
 
 use PhpOrm\Providers\Mysql\MysqlProvider;
+use PhpOrm\Providers\SqlLite\SqlLiteProvider;
 use PhpOrm\Providers\PostgreSQL\PostgreSQLProvider;
 
 class Provider
@@ -19,7 +20,7 @@ class Provider
     /**
      * Load database provider module based on the db connection type
      *
-     * @return MysqlProvider|PostgreSQLProvider|MongoDBProvider
+     * @return MysqlProvider|PostgreSQLProvider|SqlLiteProvider
      */
     public function load()
     {
@@ -29,6 +30,9 @@ class Provider
                 break;
             case Driver::POSTGRES:
                 return new PostgreSQLProvider();
+                break;
+            case Driver::SQLITE:
+                return new SqlLiteProvider();
                 break;
             default:
                 return new MysqlProvider();

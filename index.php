@@ -87,10 +87,10 @@ $dotenv->safeLoad();
 // $query = Query::table('levels')->where('name','Test')->delete();
 
 // $query = Query::table('levels'); //->first();
-// $query = Query::rawQuery("CREATE TABLE boy34 (
-//     c1 INT,
-//     c2 VARCHAR(10)
-//   );");
+$query = Query::rawQuery("CREATE TABLE girl (
+    c1 INT,
+    c2 VARCHAR(10)
+  );");
 
   $data = [
     [
@@ -106,7 +106,7 @@ $dotenv->safeLoad();
     "c2" => "Girl"
     ],
 ];
-$query = Query::table('boy34')->last();
+// $query = Query::table('boy34')->last();
 
 
 var_dump($query);

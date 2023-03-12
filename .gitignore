@@ -1,2 +1,6 @@
 vendor/
 .env
+test_db_two.sqlite
+test_db.db
+TODO.md
+index.php
