@@ -20,10 +20,13 @@ class SqlLiteConnection implements ConnectionInterface
 
     public function connection()
     {
+        $connectionString = "sqlite:{$this->databasPath}";
         try {
-            $connection = new SQLite3($this->databasPath);
+            $connection = new PDO($connectionString);
+            $connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $connection->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             return $connection;
-        } catch (Exception $error) {
+        } catch (PDOException $error) {
             die(handleSQLError($error->getMessage()));
         }
     }
