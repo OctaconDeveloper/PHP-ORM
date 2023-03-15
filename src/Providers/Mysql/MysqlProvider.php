@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace PhpOrm\Providers\Mysql;
@@ -48,7 +49,7 @@ class MysqlProvider implements QueryInterface
             $columns = getMysqlColumns($data);
             $attributes = getMysqlColumnsAttribute($data);
 
-            $sqlString =  "INSERT INTO `".self::$table."` ({$columns}) VALUES ({$attributes})";
+            $sqlString =  "INSERT INTO `" . self::$table . "` ({$columns}) VALUES ({$attributes})";
             return self::$connection->prepare($sqlString)->execute($data);
         } catch (PDOException $error) {
             die(handleSQLError($error->getMessage()));
@@ -70,7 +71,7 @@ class MysqlProvider implements QueryInterface
                 $columns = getMysqlColumns($datum);
                 $attributes = getMysqlColumnsAttribute($datum);
 
-                $sqlString =  "INSERT INTO `".self::$table."` ({$columns}) VALUES ({$attributes})";
+                $sqlString =  "INSERT INTO `" . self::$table . "` ({$columns}) VALUES ({$attributes})";
                 self::$connection->prepare($sqlString)->execute($datum);
             }
 
@@ -97,22 +98,11 @@ class MysqlProvider implements QueryInterface
         $sqlResults = self::$connection->query($sqlString)->fetchAll();
         if (self::$secondQuery) {
             $results = [];
-            foreach($sqlResults as $sqlResult)
-            {
-                var_dump($sqlResult);
-                // $results[] = [self::$secondQuery];
-                // $results[] = self::$withCondition($sqlResult, self::$secondQuery[0], self::$secondQuery[1], self::$secondQuery[2], self::$secondQueryOrder);
-            //     // $secondSqlResult =  (self::$secondQueryOrder == Constant::WITHONE) ? "1" : "2";
-                
-            //     // try{
-            //     //     $secondSqlResult =  (self::$secondQueryOrder == Constant::WITHONE) ? self::$connection->query($newQuery)->fetch() : self::$connection->query($newQuery)->fetchAll();
-            //     // }catch(PDOException $error) {
-            //     //     $secondSqlResult = null;
-            //     // }
-            //     // var_dump($newQuery, $secondSqlResult);
-            //     // die();
-            //     // $sqlResult["with"] = $secondSqlResult;
-            //     $results[] = [];
+            foreach ($sqlResults as $sqlResult) {
+                $newQuery = self::withCondition($sqlResult, self::$secondQuery[0], self::$secondQuery[1], self::$secondQuery[2], self::$secondQueryOrder);
+                $secondSqlResult =  (self::$secondQueryOrder == Constant::WITHONE) ? self::$connection->query($newQuery)->fetch() : self::$connection->query($newQuery)->fetchAll();
+                $sqlResult["with"] = $secondSqlResult;
+                $results[] = $sqlResult;
             }
 
             return $results;
@@ -171,7 +161,7 @@ class MysqlProvider implements QueryInterface
         $sqlResult = self::$connection->query($sqlString)->fetch();
 
         if (self::$secondQuery) {
-            $query = self::withCondition($sqlResult, self::$secondQuery[0], self::$secondQuery[1], self::$secondQuery[2], self::$secondQueryOrder);            
+            $query = self::withCondition($sqlResult, self::$secondQuery[0], self::$secondQuery[1], self::$secondQuery[2], self::$secondQueryOrder);
             $secondSqlResult =  (self::$secondQueryOrder == Constant::WITHONE) ? self::$connection->query($query)->fetch() : self::$connection->query($query)->fetchAll();
             $sqlResult["with"] = $secondSqlResult;
         }
@@ -186,7 +176,7 @@ class MysqlProvider implements QueryInterface
      */
     protected function getFirstColumn(): ?string
     {
-        $sqlString = "SELECT * FROM `".self::$table."`;";
+        $sqlString = "SELECT * FROM `" . self::$table . "`;";
         $result = self::$connection->query($sqlString)->fetch();
         return array_key_first($result);
     }
@@ -298,7 +288,7 @@ class MysqlProvider implements QueryInterface
             self::setCondition("{$column} {$operator} '{$value}'");
             $sqlString = "SELECT count({$column}) FROM `" . self::$table . "`" . self::$conditions;
         }
-        var_dump("string ". $sqlString, "conditions ".self::$conditions);
+        var_dump("string " . $sqlString, "conditions " . self::$conditions);
 
         // return self::$connection->query($sqlString)->fetchColumn();
         return "Yea";
@@ -345,7 +335,7 @@ class MysqlProvider implements QueryInterface
     {
         try {
             $updateSql = getMysqlUpdateAttribute($data);
-            $sqlString = "UPDATE `".self::$table."`  SET " . $updateSql . " " . self::$conditions;
+            $sqlString = "UPDATE `" . self::$table . "`  SET " . $updateSql . " " . self::$conditions;
             return self::$connection->prepare($sqlString)->execute($data);
         } catch (PDOException $error) {
             die(handleSQLError($error->getMessage()));
@@ -361,9 +351,9 @@ class MysqlProvider implements QueryInterface
     {
         try {
             if (!self::$conditions) {
-                $sqlString = "DELETE FROM `".self::$table."`";
+                $sqlString = "DELETE FROM `" . self::$table . "`";
             } else {
-                $sqlString = "DELETE FROM `".self::$table."`" . self::$conditions;
+                $sqlString = "DELETE FROM `" . self::$table . "`" . self::$conditions;
             }
             return self::$connection->prepare($sqlString)->execute();
         } catch (PDOException $error) {
@@ -512,12 +502,11 @@ class MysqlProvider implements QueryInterface
         return new self();
     }
 
-    protected function withCondition(array $query, $table, $foreignKey, $primaryKey, string $limit = Constant::WITHONE)
+    protected function withCondition(array $query, string $table, string $foreignKey, string $primaryKey, string $limit = Constant::WITHONE)
     {
-        var_dump($table, $foreignKey, $primaryKey);
         $columnValue = $query[$primaryKey];
-        self::$secondQuery = "SELECT * FROM {$table} WHERE {$foreignKey} = '$columnValue' ";
-        self::$secondQuery .= $limit == Constant::WITHONE ? " LIMIT 1 " : "";
-        return self::$secondQuery;
+        $query = "SELECT * FROM {$table} WHERE {$foreignKey} = '$columnValue' ";
+        $query .= $limit == Constant::WITHONE ? " LIMIT 1 " : "";
+        return $query;
     }
 }

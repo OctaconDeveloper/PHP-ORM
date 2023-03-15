@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace PhpOrm\Providers\SqlLite;
@@ -6,14 +7,18 @@ namespace PhpOrm\Providers\SqlLite;
 use Exception;
 use PDOException;
 use PhpOrm\Interfaces\QueryInterface;
+use PhpOrm\Utils\Constant;
 
 class SqlLiteProvider implements QueryInterface
 {
 
-    private $connection;
-    private $query;
-    private $conditions;
-    private $table;
+    private static $connection;
+    private static $query;
+    private static $secondQuery = null;
+    private static $secondQueryOrder = Constant::WITHMANY;
+    private static $conditions;
+    private static $table;
+
 
     public function __construct()
     {
@@ -38,9 +43,9 @@ class SqlLiteProvider implements QueryInterface
      */
     public function setTable(string $table)
     {
-        $this->table = $table;
-        $this->query = "SELECT * FROM `" . $this->table . "`";
-        return $this;
+        self::$table = $table;
+        self::$query = "SELECT * FROM `" . self::$table . "`";
+        return new self();
     }
 
     /**
@@ -55,7 +60,7 @@ class SqlLiteProvider implements QueryInterface
             $columns = getMysqlColumns($data);
             $attributes = getMysqlColumnsAttribute($data);
 
-            $sqlString =  "INSERT INTO `{$this->table}` ({$columns}) VALUES ({$attributes})";
+            $sqlString =  "INSERT INTO `" . self::$table . "` ({$columns}) VALUES ({$attributes})";
             return $this->connection->prepare($sqlString)->execute($data);
         } catch (PDOException $error) {
             die(handleSQLError($error->getMessage()));
@@ -77,7 +82,7 @@ class SqlLiteProvider implements QueryInterface
                 $columns = getMysqlColumns($datum);
                 $attributes = getMysqlColumnsAttribute($datum);
 
-                $sqlString =  "INSERT INTO `{$this->table}` ({$columns}) VALUES ({$attributes})";
+                $sqlString =  "INSERT INTO `" . self::$table . "` ({$columns}) VALUES ({$attributes})";
                 $this->connection->prepare($sqlString)->execute($datum);
             }
 
@@ -91,7 +96,6 @@ class SqlLiteProvider implements QueryInterface
 
 
 
-
     /**
      * Get all rows
      *
@@ -100,8 +104,21 @@ class SqlLiteProvider implements QueryInterface
      */
     public function all()
     {
-        $sqlString =  $this->query . $this->conditions;
-        return $this->connection->query($sqlString)->fetchAll();
+        $sqlString =  self::$query . self::$conditions;
+        $sqlResults = self::$connection->query($sqlString)->fetchAll();
+        if (self::$secondQuery) {
+            $results = [];
+            foreach ($sqlResults as $sqlResult) {
+                $newQuery = self::withCondition($sqlResult, self::$secondQuery[0], self::$secondQuery[1], self::$secondQuery[2], self::$secondQueryOrder);
+                $secondSqlResult =  (self::$secondQueryOrder == Constant::WITHONE) ? self::$connection->query($newQuery)->fetch() : self::$connection->query($newQuery)->fetchAll();
+                $sqlResult["with"] = $secondSqlResult;
+                $results[] = $sqlResult;
+            }
+
+            return $results;
+        }
+
+        return $sqlResults;
     }
 
     /**
@@ -112,13 +129,22 @@ class SqlLiteProvider implements QueryInterface
      */
     public function first()
     {
-        if (strpos($this->conditions, "LIMIT") !== false) {
+        if (isset(self::$conditions) && strpos(self::$conditions, "LIMIT") !== false) {
             die(handleSQLError("first() can not be used with take() \n\n"));
         }
 
-        $sqlString =  $this->query . $this->conditions . " LIMIT 1";
+        $sqlString =  self::$query . self::$conditions . " LIMIT 1";
 
-        return $this->connection->query($sqlString)->fetch();
+        $sqlResult = self::$connection->query($sqlString)->fetch();
+
+        if (self::$secondQuery) {
+
+            $query = self::withCondition($sqlResult, self::$secondQuery[0], self::$secondQuery[1], self::$secondQuery[2], self::$secondQueryOrder);
+            $secondSqlResult =  (self::$secondQueryOrder == Constant::WITHONE) ? self::$connection->query($query)->fetch() : self::$connection->query($query)->fetchAll();
+            $sqlResult["with"] = $secondSqlResult;
+        }
+
+        return $sqlResult;
     }
 
     /**
@@ -130,18 +156,27 @@ class SqlLiteProvider implements QueryInterface
     public function last(string $column = null)
     {
         if (!$column) {
-            $column =  $this->getFirstColumn();
+            $column =  self::getFirstColumn();
         }
-        if (strpos($this->conditions, "LIMIT") !== false) {
+        if (strpos(self::$conditions, "LIMIT") !== false) {
             die(handleSQLError("last() can not be used with take() \n\n"));
         }
         //check if condition has ORDER BY;
-        if (strpos($this->conditions, "ORDER BY") !== false) {
-            $sqlString =  $this->query  . $this->conditions;
+        if (strpos(self::$conditions, "ORDER BY") !== false) {
+            $sqlString =  self::$query  . self::$conditions;
         } else {
-            $sqlString =  $this->query  . $this->conditions . " ORDER BY `{$column}` DESC LIMIT 1";
+            $sqlString =  self::$query  . self::$conditions . " ORDER BY `{$column}` DESC LIMIT 1";
         }
-        return $this->connection->query($sqlString)->fetch();
+
+        $sqlResult = self::$connection->query($sqlString)->fetch();
+
+        if (self::$secondQuery) {
+            $query = self::withCondition($sqlResult, self::$secondQuery[0], self::$secondQuery[1], self::$secondQuery[2], self::$secondQueryOrder);
+            $secondSqlResult =  (self::$secondQueryOrder == Constant::WITHONE) ? self::$connection->query($query)->fetch() : self::$connection->query($query)->fetchAll();
+            $sqlResult["with"] = $secondSqlResult;
+        }
+
+        return $sqlResult;
     }
 
     /**
@@ -151,7 +186,7 @@ class SqlLiteProvider implements QueryInterface
      */
     protected function getFirstColumn(): ?string
     {
-        $sqlString = "SELECT * FROM {$this->table};";
+        $sqlString = "SELECT * FROM `" . self::$table . "`";
         $result = $this->connection->query($sqlString)->fetch();
         return array_key_first($result);
     }
@@ -258,10 +293,10 @@ class SqlLiteProvider implements QueryInterface
         }
 
         if ($column != "*" && isset($value)) {
-            $sqlString = "SELECT count(*) FROM `" . $this->table . "`" . $this->conditions;
+            $sqlString = "SELECT count(*) FROM `" . self::$table . "`" . self::$conditions;
         } else {
             $this->setCondition("`{$column}` {$operator} '{$value}'");
-            $sqlString = "SELECT count({$column}) FROM `" . $this->table . "`" . $this->conditions;
+            $sqlString = "SELECT count({$column}) FROM `" . self::$table . "`" . self::$conditions;
         }
 
         return $this->connection->query($sqlString)->fetchColumn();
@@ -278,7 +313,7 @@ class SqlLiteProvider implements QueryInterface
         if (!$column) {
             $column =  $this->getFirstColumn();
         }
-        $sqlString = "SELECT MAX({$column}) FROM `" . $this->table . "`" . $this->conditions;
+        $sqlString = "SELECT MAX({$column}) FROM `" . self::$table . "`" . self::$conditions;
         return $this->connection->query($sqlString)->fetchColumn();
     }
 
@@ -293,7 +328,7 @@ class SqlLiteProvider implements QueryInterface
         if (!$column) {
             $column =  $this->getFirstColumn();
         }
-        $sqlString = "SELECT MIN({$column}) FROM `" . $this->table . "`" . $this->conditions;
+        $sqlString = "SELECT MIN({$column}) FROM `" . self::$table . "`" . self::$conditions;
         return $this->connection->query($sqlString)->fetchColumn();
     }
 
@@ -308,7 +343,7 @@ class SqlLiteProvider implements QueryInterface
     {
         try {
             $updateSql = getMysqlUpdateAttribute($data);
-            $sqlString = "UPDATE `{$this->table}`  SET " . $updateSql . " " . $this->conditions;
+            $sqlString = "UPDATE `" . self::$table . "`  SET " . $updateSql . " " . self::$conditions;
             return $this->connection->prepare($sqlString)->execute($data);
         } catch (Exception $error) {
             die(handleSQLError($error->getMessage()));
@@ -323,10 +358,10 @@ class SqlLiteProvider implements QueryInterface
     public function delete(): ?bool
     {
         try {
-            if (!$this->conditions) {
-                $sqlString = "DELETE FROM `{$this->table}`";
+            if (!self::$conditions) {
+                $sqlString = "DELETE FROM `" . self::$table . "`";
             } else {
-                $sqlString = "DELETE FROM `{$this->table}`" . $this->conditions;
+                $sqlString = "DELETE FROM `" . self::$table . "`" . self::$conditions;
             }
             return $this->connection->prepare($sqlString)->execute();
         } catch (Exception $error) {
@@ -407,18 +442,65 @@ class SqlLiteProvider implements QueryInterface
      */
     protected function setCondition($condition, $joinKey = null): string
     {
-        if ($joinKey && !empty($this->conditions)) {
+        if ($joinKey && !empty(self::$conditions)) {
             switch ($joinKey) {
                 case 'ORDER':
                 case 'LIMIT':
-                    $this->conditions .= " " . $condition;
+                    self::$conditions .= " " . $condition;
                     break;
                 default:
-                    $this->conditions .= " " . $joinKey . " " . $condition;
+                    self::$conditions .= " " . $joinKey . " " . $condition;
             }
         } else {
-            $this->conditions .= " WHERE " . $condition;
+            self::$conditions .= " WHERE " . $condition;
         }
-        return $this->conditions;
+        return self::$conditions;
+    }
+
+    /**
+     * Add one to many ralationship query
+     *
+     * @param string $table
+     * @param string $foreignKey
+     * @param string $primaryKey
+     * @return new self()
+     */
+    public function withMany(string $table, string $foreignKey, string $primaryKey = 'id')
+    {
+        self::$secondQuery = [
+            $table,
+            $foreignKey,
+            $primaryKey
+        ];
+        self::$secondQueryOrder = Constant::WITHMANY;
+        return new self();
+    }
+
+    /**
+     * Add one to one ralationship query
+     *
+     * @param string $table
+     * @param string $foreignKey
+     * @param string $primaryKey
+     * @return new self()
+     */
+    public function withOne(string $table, string $foreignKey, string $primaryKey = 'id')
+    {
+        self::$secondQuery = [
+            $table,
+            $foreignKey,
+            $primaryKey
+        ];
+        self::$secondQueryOrder = Constant::WITHONE;
+
+        return new self();
+    }
+
+    protected function withCondition(array $query, string $table, string $foreignKey, string $primaryKey, string $limit = Constant::WITHONE)
+    {
+        $columnValue = $query[$primaryKey];
+        $query = "SELECT * FROM {$table} WHERE {$foreignKey} = '$columnValue' ";
+        $query .= $limit == Constant::WITHONE ? " LIMIT 1 " : "";
+        return $query;
     }
 }

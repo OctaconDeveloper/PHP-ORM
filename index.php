@@ -123,7 +123,7 @@ $dotenv->safeLoad();
 
 // // var_dump($query);
 
-$gg = User::withOne('users','username','username')->first();
+$gg = User::withMany('users','username','username')->first();
 // $gg = (new User())->all();
 
 var_dump($gg);
