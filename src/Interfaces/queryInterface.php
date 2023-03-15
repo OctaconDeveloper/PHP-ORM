@@ -14,7 +14,7 @@ interface QueryInterface
     public function andWhere(string $column, string $operand, string $value);
     public function orWhere(string $column, string $operand, string $value);
     public function orderBy(string $column, string $order);
-    public function count(string $column = "*", string $value, string $operand);
+    public function count(string $column, string $value, string $operand);
     public function max(string $column);
     public function min(string $column);
     public function update(array $data);
