@@ -3,5 +3,5 @@ vendor/
 test_db_two.sqlite
 test_db.db
 TODO.md
-index.php
+Index.php
 User.php
