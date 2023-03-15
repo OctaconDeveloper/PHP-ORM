@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace PhpOrm\Providers\Mysql;
 
@@ -31,6 +32,7 @@ class MysqlConnection implements ConnectionInterface
         try {
             $connection = new PDO($connectionString, $this->databaseUser, $this->databasePassword);
             $connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $connection->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             return $connection;
         } catch (PDOException $error) {
             die(handleSQLError($error->getMessage()));

@@ -1,6 +1,7 @@
 <?php
 
 require("vendor/autoload.php");
+require("./User.php");
 
 
 use PhpOrm\Providers\Mysql\MysqlConnection;
@@ -107,14 +108,22 @@ $dotenv->safeLoad();
 //     ],
 // ];
 
-$data = [
-    "c1" => "Harrys",
-    "c2" => "Sammy"
-];
+// $data = [
+//     "c1" => "Harrys",
+//     "c2" => "Sammy"
+// ];
 
-$query = Query::table('boy34')->insert($data);
-// $query = Query::table('boy34')->all();
+// // $query = Query::table('boy34')->insert($data);
+// // $query = Query::table('transactions')->withOne('users','username','username')->all();
+// // $query = Query::table('transactions')->withOne('users','username')->all();
+// $query = Query::table('transactions')->withOne('users','username','username')->all();
+// // $query = Query::table('boy34')->all();
 
 // $query = json_encode($query);
 
-var_dump($query);
+// // var_dump($query);
+
+$gg = User::withOne('users','username','username')->first();
+// $gg = (new User())->all();
+
+var_dump($gg);
