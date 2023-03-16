@@ -18,7 +18,32 @@ Install PHP-ORM with composer
 ```bash
   composer require octacondeveloper/php-orm
 ```
-    
+
+## Env
+
+```bash
+  ## MYSQL Connection Example
+    DB_CONNECTION=mysql
+    DB_HOST=
+    DB_PORT=
+    DB_DATABASE=
+    DB_USERNAME=
+    DB_PASSWORD=
+
+
+    # ## POSTGRES Connection Example
+    DB_CONNECTION=postgresql
+    DB_HOST=127.0.0.1
+    DB_PORT=5432
+    DB_DATABASE=
+    DB_USERNAME=
+    DB_PASSWORD=
+
+    ## SQLite Connection Example
+    DB_CONNECTION=sqlite
+    DB_PATH="test_db_two.sqlite"
+```
+
 ## Usage/Examples
 
 ```php
