@@ -1,7 +1,7 @@
 
 # PHP-ORM
 
-This is a light weight ORM for core PHP applications that supports multiple database engine out of the box.
+This is a light weight ORM for core PHP applications that supports MySQL, Postgres and Sqlite database engine out of the box.
 
 
 ## Badges

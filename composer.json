@@ -1,6 +1,6 @@
 {
     "name": "octacondeveloper/php-orm",
-    "description": "A native orm for core php",
+    "description": "This is a light weight ORM for core PHP applications that supports MySQL, Postgres and Sqlite database engine out of the box.",
     "type": "library",
     "license": "MIT",
     "authors": [
